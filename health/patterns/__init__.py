@@ -1,0 +1,1 @@
+"""Somut GoF kalıpları."""
