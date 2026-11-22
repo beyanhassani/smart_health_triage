@@ -1,69 +1,63 @@
 # Smart AI Health & Triage Assistant
 
-EBLG443 Tasarım Kalıpları dönem projesi · Beyan Hassani – 20212013122
+EBLG443 Tasarım Kalıpları dönem projesi – Beyan Hassani (20212013122)
 
-Hasta şikâyetini ön değerlendirmeden (triage) geçiren, uygun poliklinik ve randevu türünü
-(acil / genel / online) belirleyen, randevu durumunu takip edip bildirim gönderen ve tıbbi
-kayıtlara rol tabanlı erişim (RBAC) sağlayan modüler bir sağlık asistanı.
-Sistem tanı koymaz; yalnızca yönlendirme yapar.
+## Proje ne yapıyor?
 
-- Python 3.11+, arayüzler `abc.ABC` ve `typing.Protocol` ile, SOLID prensipleri
-- Harici kütüphane yok; internet ve API anahtarı gerekmez
-- RAG tabanlı triage (yerel embedding + kosinüs benzerliği), kritik semptomlar için kural tabanlı güvenlik ağı
+Hasta şikâyetini yazıyor; sistem bunu değerlendirip hangi poliklinik ve hangi tür randevunun (acil, genel, online) gerektiğine karar veriyor. Randevunun durumu değişince hasta ve doktora bildirim gidiyor. Tıbbi kayıtlara yalnızca yetkisi olan roller erişebiliyor.
 
-## Hızlı başlangıç
+Sistem tanı koymuyor, sadece yönlendiriyor.
+
+## Çalıştırma
 
 ```bash
-python -m unittest discover -v    # 64 test
-python demo.py                    # uçtan uca gösterim
+python -m unittest discover -v    # testler (64 test)
+python demo.py                    # örnek senaryo
 ```
 
-Ayrıntılar: [KURULUM.md](KURULUM.md) · [TEST.md](TEST.md)
+Python 3.11 ve üstü yeterli. Ek kütüphane gerekmiyor, internet de gerekmiyor.
+Ayrıntılar: [KURULUM.md](KURULUM.md) ve [TEST.md](TEST.md).
 
-## Kalıp Haritası
+## Kullandığım tasarım kalıpları
 
-| Kalıp | Grup | Çözülen problem | Rol → Sınıf (dosya) |
+| Kalıp | Ne için kullandım | Ana sınıflar | Nerede |
 |---|---|---|---|
-| **Factory Method** | Yaratımsal | Triage sonucuna göre davranışı farklı randevu türlerinin üretimi | Product → `Appointment` (`interfaces/appointment.py`)<br>ConcreteProduct → `EmergencyAppointment`, `GeneralAppointment`, `OnlineAppointment` (`patterns/factory/appointments.py`)<br>Creator → `AppointmentCreator` (`interfaces/appointment.py`)<br>ConcreteCreator → `Emergency/General/OnlineAppointmentCreator` (`patterns/factory/creators.py`) |
-| **Proxy** | Yapısal | Hassas tıbbi kayda yetkisiz erişimin engellenmesi, denetim kaydı ve tembel yükleme | Subject → `IMedicalRecord` (`interfaces/medical_record.py`)<br>RealSubject → `RealMedicalRecord` (`patterns/proxy/real_record.py`)<br>Proxy → `MedicalRecordProxy` (`patterns/proxy/proxy.py`) |
-| **Facade** | Yapısal | Triage, randevu, gözlemci ve bildirim adımlarının tek giriş noktasında sunulması | Facade → `HealthSystemFacade` (`patterns/facade/facade.py`)<br>Subsystem → `KeywordTriageEngine`/`RagTriageEngine`, `AppointmentService`, `InMemoryNotificationService` (`services/`, `ai/`) |
-| **Observer** | Davranışsal | Randevu durumu değişince hasta ve doktorun bilgilendirilmesi | Subject → `IAppointmentSubject` / `AppointmentSubject` (`interfaces/observer.py`, `patterns/observer/subject.py`)<br>ConcreteObserver → `PatientObserver`, `DoctorObserver` (`patterns/observer/observers.py`) |
-| **Strategy** | Davranışsal | Ciddiyet skoru hesaplama algoritmasının çalışma zamanında değiştirilebilmesi | Strategy → `SeverityScoringStrategy` (`interfaces/scoring.py`)<br>ConcreteStrategy → `TopMatch…`, `WeightedAverage…`, `Conservative…SeverityStrategy` (`patterns/strategy/strategies.py`)<br>Context → `RagTriageEngine` (`ai/rag_triage.py`) |
+| Factory Method | Acil, genel ve online randevular farklı davranıyor (öncelik, süre, zaman). Üretimi Creator sınıflarına bıraktım. | `AppointmentCreator`, `Emergency/General/OnlineAppointmentCreator`, `Appointment` | `health/interfaces/appointment.py`, `health/patterns/factory/` |
+| Proxy | Tıbbi kayda erişimi rol kontrolüyle koruyor, erişimleri kaydediyor, gerçek kaydı ancak gerektiğinde yüklüyor. | `IMedicalRecord`, `MedicalRecordProxy`, `RealMedicalRecord` | `health/patterns/proxy/` |
+| Facade | Triage, randevu oluşturma, kayıt ve bildirim adımlarını tek bir metotta topluyor. | `HealthSystemFacade` | `health/patterns/facade/facade.py` |
+| Observer | Randevu durumu değişince hasta ve doktor haberdar oluyor. | `AppointmentSubject`, `PatientObserver`, `DoctorObserver` | `health/patterns/observer/` |
+| Strategy | Ciddiyet skorunun nasıl hesaplanacağını değiştirebilmek için. | `SeverityScoringStrategy` ve üç somut strateji | `health/interfaces/scoring.py`, `health/patterns/strategy/` |
 
-Kodda her kalıp rolü, kalıbın adını ve rolünü belirten kısa bir yorumla işaretlenmiştir:
+Kodda her kalıp rolünün üstünde şöyle bir yorum var:
 
 ```python
 # Kalıp: Factory Method | Rol: ConcreteCreator
-class EmergencyAppointmentCreator(_ClockedCreator): ...
 ```
 
-Tüm işaretleri listelemek için: `grep -rn "# Kalıp:" health` (işaretlerin varlığı `tests/test_pattern_tags.py` ile denetlenir).
+Hepsini görmek için: `grep -rn "# Kalıp:" health`
 
-## Dizin Yapısı
+## Yapay zekâ kısmı
 
-- `health/domain/`      enum'lar ve değiştirilemez (immutable) veri modelleri
-- `health/interfaces/`  sistemin tüm soyutlamaları (ABC / Protocol)
-- `health/patterns/`    GoF kalıplarının somut gerçeklemeleri
-- `health/services/`    alt sistem servisleri (triage, randevu, bildirim)
-- `health/ai/`          RAG motoru: embedding, vektör deposu, bilgi tabanı, sahte LLM
-- `health/app.py`       composition root
-- `tests/`              unittest testleri
-- `demo.py`             uçtan uca gösterim
+Şikâyet metni vektöre çevriliyor, bilgi tabanındaki en benzer dokümanlar kosinüs benzerliğiyle bulunuyor ve ciddiyet skoru Strategy ile hesaplanıyor.
 
-## ABC mi Protocol mü?
+- Göğüs ağrısı gibi kritik belirtiler RAG'e sorulmadan doğrudan acile yönlendiriliyor.
+- Karar kodla veriliyor. LLM yalnızca açıklama metni yazıyor; internetsiz çalışan sahte bir LLM kullandım.
+- Bilgi tabanı örnek veridir, tıbbi tavsiye değildir.
+- Kullandığım embedding yöntemi basit; kelimelerin anlamını anlamıyor, sadece harf ve kelime benzerliğine bakıyor.
 
-- `ABC`: ortak davranışı olan roller (Creator, Product, Subject, Observer, Strategy)
-- `Protocol`: dış veya değiştirilebilir bağımlılıklar (LLM, embedding, vektör deposu, alt sistem sözleşmeleri, `IMedicalRecord`)
+## Klasörler
 
-## Güvenlik ve sınırlar
+- `health/domain/` – veri modelleri ve enum'lar
+- `health/interfaces/` – soyut sınıflar ve Protocol'ler
+- `health/patterns/` – kalıpların gerçeklemeleri
+- `health/services/` – triage, randevu ve bildirim servisleri
+- `health/ai/` – RAG kısmı (embedding, vektör deposu, bilgi tabanı)
+- `health/app.py` – parçaların birleştirildiği yer
+- `tests/` – testler
+- `demo.py` – örnek senaryo
 
-- Ölümcül belirtiler (ör. göğüs ağrısı) LLM/RAG'e sorulmadan kural tabanlı güvenlik ağıyla acile yönlendirilir.
-- Triage kararı deterministiktir; LLM yalnızca gerekçe metnini yazar, karar vermez.
-- Bilgi tabanı dokümanları eğitim amaçlı sentetik örneklerdir ve tıbbi tavsiye değildir.
-- Gömme (embedding) basit bir harf/kelime tabanlı yöntemdir; anlam benzerliğini yakalamaz.
+## Kaynaklar ve yapay zekâ kullanımı
 
-## Kullanılan kaynaklar ve yapay zekâ
-
-- Harici/açık kaynak kütüphane kullanılmamıştır (yalnızca Python standart kütüphanesi).
-- Tasarım ve kod taslakları sırasında yapay zekâ kod asistanı (Claude, Anthropic) kullanılmıştır; ayrıntı proje raporunda belirtilmiştir.
-- Kaynaklar: Head First Design Patterns (2. Sürüm); Gamma ve ark., Design Patterns (1994).
+- Harici kütüphane kullanmadım, sadece Python standart kütüphanesi var.
+- Projeyi geliştirirken yapay zekâ kod asistanı (Claude, Anthropic) kullandım. Bunu raporumda da belirttim.
+- Kaynaklar: Head First Design Patterns (2. Sürüm), Gamma ve ark., Design Patterns (1994).
