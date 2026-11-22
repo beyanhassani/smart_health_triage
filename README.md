@@ -56,8 +56,4 @@ Hepsini görmek için: `grep -rn "# Kalıp:" health`
 - `tests/` – testler
 - `demo.py` – örnek senaryo
 
-## Kaynaklar ve yapay zekâ kullanımı
 
-- Harici kütüphane kullanmadım, sadece Python standart kütüphanesi var.
-- Projeyi geliştirirken yapay zekâ kod asistanı (Claude, Anthropic) kullandım. Bunu raporumda da belirttim.
-- Kaynaklar: Head First Design Patterns (2. Sürüm), Gamma ve ark., Design Patterns (1994).
