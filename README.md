@@ -1,7 +1,5 @@
 # Smart AI Health & Triage Assistant
 
-EBLG443 Tasarım Kalıpları dönem projesi – Beyan Hassani (20212013122)
-
 ## Proje ne yapıyor?
 
 Hasta şikâyetini yazıyor; sistem bunu değerlendirip hangi poliklinik ve hangi tür randevunun (acil, genel, online) gerektiğine karar veriyor. Randevunun durumu değişince hasta ve doktora bildirim gidiyor. Tıbbi kayıtlara yalnızca yetkisi olan roller erişebiliyor.
